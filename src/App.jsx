@@ -27,62 +27,52 @@ const congratsLines = [
   "მხიარული და საყვარელი იყო 🥰",
   "",
   "გილოცავ ანა🌸",
-  // "მიყვარხარ🌸"
 ];
 
-// ფოტოების თანმიმდევრობა შეცვლილია
 const PHOTOS = [
   "https://tse3.mm.bing.net/th/id/OIP.BV1vh7lYdV17beq65P9flAHaHk?pid=Api&h=220&P=0",
   "https://tse4.mm.bing.net/th/id/OIP.8LlXbMNblPvPiB3KQwpG4QHaFj?pid=Api&h=220&P=0",
 ];
 
 function NoButton({ containerRef }) {
-  const [pos, setPos] = useState(null);
+  const [pos, setPos] = useState({ x: null, y: null });
   const btnRef = useRef(null);
 
   function runAway() {
     const container = containerRef.current;
-    const btn = btnRef.current;
-    const yes = yesRef.current;
-    if (!container || !btn || !yes) return;
-
+    if (!container || !btnRef.current) return;
+    
     const cr = container.getBoundingClientRect();
-    const br = btn.getBoundingClientRect();
-    const yr = yes.getBoundingClientRect();
+    const br = btnRef.current.getBoundingClientRect();
+    
+    const maxX = cr.width - br.width;
+    const maxY = cr.height - br.height;
+    
+    let nx, ny;
+    let isTooCloseToCenter;
+    let tries = 0;
 
-    const bw = br.width;
-    const bh = br.height;
-    const maxX = cr.width - bw;
-    const maxY = cr.height - bh;
-
-    const yesLeft = yr.left - cr.left;
-    const yesTop = yr.top - cr.top;
-    const yesRight = yesLeft + yr.width;
-    const yesBottom = yesTop + yr.height;
-    const margin = 20;
-
-    let nx, ny, tries = 0;
     do {
       nx = Math.random() * maxX;
       ny = Math.random() * maxY;
-      const noRight = nx + bw;
-      const noBottom = ny + bh;
-      const overlaps =
-        nx < yesRight + margin &&
-        noRight > yesLeft - margin &&
-        ny < yesBottom + margin &&
-        noBottom > yesTop - margin;
-      if (!overlaps) break;
+      
+      // ვამოწმებთ, რომ ახალი პოზიცია არ იყოს ცენტრთან ძალიან ახლოს (სადაც "ძალიან" ღილაკია)
+      const centerX = maxX / 2;
+      const centerY = maxY / 2;
+      const distFromCenter = Math.sqrt(Math.pow(nx - centerX, 2) + Math.pow(ny - centerY, 2));
+      
+      isTooCloseToCenter = distFromCenter < 100; 
       tries++;
-    } while (tries < 40);
+    } while (isTooCloseToCenter && tries < 50);
 
     setPos({ x: nx, y: ny });
   }
+
   const style = pos.x !== null ? {
     position: "absolute",
     left: pos.x,
     top: pos.y,
-    transition: "left 0.18s cubic-bezier(.34,1.56,.64,1), top 0.18s cubic-bezier(.34,1.56,.64,1)",
+    transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
   } : {
     position: "relative",
   };
@@ -94,18 +84,19 @@ function NoButton({ containerRef }) {
       onTouchStart={runAway}
       style={{
         ...style,
-        background: "rgba(255,255,255,0.9)",
-        border: "2px solid rgba(220,100,140,0.4)",
+        background: "rgba(255,255,255,0.95)",
+        border: "2px solid rgba(220,100,140,0.3)",
         borderRadius: "30px",
         padding: "14px 32px",
         color: "#c0265a",
-        fontSize: "clamp(1rem, 3vw, 1.2rem)",
+        fontSize: "1rem",
         fontFamily: "'Georgia', serif",
         fontWeight: "700",
-        cursor: "default",
+        cursor: "pointer",
         userSelect: "none",
         whiteSpace: "nowrap",
-        zIndex: 2,
+        zIndex: 5,
+        boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
       }}
     >
       არა 😅
@@ -159,9 +150,6 @@ export default function App() {
   function handleYes(e) {
     fireSparkles(e.clientX, e.clientY);
     setShowLove(true);
-    setTimeout(() => {
-      loveBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
   }
 
   const hearts = Array.from({ length: 30 }, (_, i) => i);
@@ -175,7 +163,7 @@ export default function App() {
       alignItems: "center",
       justifyContent: "center",
       fontFamily: "'Georgia', 'Times New Roman', serif",
-      overflow: "hidden",
+      overflowX: "hidden",
       position: "relative",
       padding: "2rem 0",
     }}>
@@ -245,7 +233,6 @@ export default function App() {
           </div>
           <div style={{ position: "relative" }}>
             <div style={{ position: "absolute", inset: "-12px", borderRadius: "50px", border: "2px solid rgba(220,50,110,0.3)", animation: "ringPulse 2s ease-in-out infinite", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", inset: "-24px", borderRadius: "60px", border: "1.5px solid rgba(220,50,110,0.15)", animation: "ringPulse 2s ease-in-out infinite 0.4s", pointerEvents: "none" }} />
             <button className="btn-main" onClick={handleMainClick} style={{
               background: "linear-gradient(120deg, #e8285a, #ff6699, #e8285a, #c0265a)",
               backgroundSize: "200% auto",
@@ -259,20 +246,17 @@ export default function App() {
               💝 დააკლიკე, ანა 💝
             </button>
           </div>
-          <p style={{ color: "rgba(180,40,80,0.55)", fontSize: "0.95rem", fontStyle: "italic" }}>✨ პატარა სიურპრიზი შენთვის ✨</p>
         </div>
       ) : (
-        <div style={{ zIndex: 10, maxWidth: "600px", width: "90vw", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+        <div style={{ zIndex: 10, maxWidth: "600px", width: "90vw", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
 
-          {/* Main card */}
           <div style={{
             background: "rgba(255,255,255,0.85)", backdropFilter: "blur(16px)",
             borderRadius: "28px", border: "2px solid rgba(220,100,140,0.25)",
             boxShadow: "0 12px 60px rgba(200,50,100,0.18)",
-            padding: "clamp(1.5rem, 5vw, 2.5rem) clamp(1.5rem, 6vw, 3rem)",
-            textAlign: "center", width: "100%",
+            padding: "2rem", textAlign: "center", width: "100%",
           }}>
-            <div style={{ fontSize: "clamp(2rem, 8vw, 3.5rem)", marginBottom: "1.2rem", animation: "titleFloat 3s ease-in-out infinite" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1.2rem", animation: "titleFloat 3s ease-in-out infinite" }}>
               🎉💖🎂💖🎉
             </div>
 
@@ -280,7 +264,7 @@ export default function App() {
               visibleLines.includes(idx) && (
                 <p key={idx} style={{
                   margin: line === "" ? "0.5rem 0" : "0.1rem 0",
-                  fontSize: idx === 0 ? "clamp(1.3rem, 4vw, 1.9rem)" : "clamp(1rem, 3vw, 1.2rem)",
+                  fontSize: idx === 0 ? "1.6rem" : "1.1rem",
                   fontWeight: idx === 0 ? "700" : "400",
                   color: idx === 0 ? "#c0265a" : "#6b2040",
                   lineHeight: "1.7",
@@ -290,7 +274,8 @@ export default function App() {
                 </p>
               )
             ))}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "1.5rem" }}>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "1.5rem" }}>
               {PHOTOS.map((src, i) => (
                 <div key={i} style={{
                   borderRadius: "16px", overflow: "hidden",
@@ -298,106 +283,64 @@ export default function App() {
                   boxShadow: "0 4px 16px rgba(200,50,100,0.15)",
                   aspectRatio: "1",
                   animation: `fadeSlideIn 0.6s ease-out ${i * 0.15}s both`,
-                  transform: i % 2 === 0 ? "rotate(-1.5deg)" : "rotate(1.5deg)",
+                  transform: i % 2 === 0 ? "rotate(-2deg)" : "rotate(2deg)",
                 }}>
-                  <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
               ))}
             </div>
-
-
-            {visibleLines.length >= congratsLines.length && (
-              <div style={{ marginTop: "1.5rem", fontSize: "clamp(1.5rem, 5vw, 2.2rem)", animation: "titleFloat 2.5s ease-in-out infinite" }}>
-                🌸💕🌸💕🌸
-              </div>
-            )}
           </div>
 
-          {/* გიყვარვარ section */}
           {allDone && !showLove && (
-            <div style={{
-              width: "100%",
-              background: "rgba(255,255,255,0.88)",
-              backdropFilter: "blur(16px)",
+            <div ref={loveBoxRef} style={{
+              width: "100%", height: "250px", // სიმაღლე გაიზარდა რომ მეტი ადგილი ჰქონდეს გაქცევისთვის
+              background: "rgba(255,255,255,0.8)",
+              backdropFilter: "blur(10px)",
               borderRadius: "24px",
-              border: "2px solid rgba(220,100,140,0.25)",
-              boxShadow: "0 8px 40px rgba(200,50,100,0.14)",
-              padding: "1.8rem 1.5rem",
+              border: "2px solid rgba(220,100,140,0.2)",
+              padding: "1.5rem",
               textAlign: "center",
-              animation: "fadeSlideIn 0.7s ease-out both",
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              overflow: "hidden"
             }}>
-              <p style={{
-                fontSize: "clamp(1.2rem, 4vw, 1.6rem)",
-                fontWeight: "700",
-                color: "#c0265a",
-                marginBottom: "1.5rem",
-                animation: "titleFloat 3s ease-in-out infinite",
-              }}>
+              <p style={{ fontSize: "1.4rem", fontWeight: "700", color: "#c0265a", marginBottom: "1rem" }}>
                 მოგეწონა? 💝
               </p>
 
-              <div ref={loveBoxRef} style={{
-                position: "relative",
-                height: "120px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "1.5rem",
-              }}>
+              {/* ცენტრალური კონტეინერი ღილაკებისთვის */}
+              <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                
                 <button className="btn-yes" onClick={handleYes} style={{
-                  position: "relative",
-                  zIndex: 2,
-                  background: "linear-gradient(120deg, #e8285a, #ff6699, #e8285a)",
-                  backgroundSize: "200% auto",
-                  animation: "shimmer 3s linear infinite",
+                  background: "linear-gradient(120deg, #e8285a, #ff6699)",
                   border: "none", borderRadius: "30px",
-                  padding: "14px 36px",
-                  color: "#fff",
-                  fontSize: "clamp(1rem, 3vw, 1.2rem)",
-                  fontFamily: "'Georgia', serif", fontWeight: "700",
-                  cursor: "pointer", whiteSpace: "nowrap",
-                  boxShadow: "0 4px 20px rgba(220,50,100,0.35)",
-                  transition: "transform 0.15s",
+                  padding: "14px 36px", color: "#fff",
+                  fontSize: "1.1rem", fontWeight: "700",
+                  cursor: "pointer", zIndex: 10,
+                  boxShadow: "0 4px 20px rgba(220,50,100,0.3)",
                 }}>
                   ძალიან 😍
                 </button>
 
-                <div style={{ position: "absolute", top: "12px", right: "12px" }}>
-                  <NoButton containerRef={loveBoxRef} yesRef={yesRef} />
-                </div>
+                <NoButton containerRef={loveBoxRef} />
               </div>
             </div>
           )}
 
-          {/* Love response */}
           {showLove && (
             <div style={{
-              width: "100%",
-              background: "linear-gradient(135deg, #ffe0ec, #fff0f5)",
-              borderRadius: "24px",
-              border: "2px solid rgba(220,100,140,0.35)",
-              boxShadow: "0 8px 40px rgba(200,50,100,0.2)",
-              padding: "2rem 1.5rem",
-              textAlign: "center",
+              width: "100%", background: "white", borderRadius: "24px",
+              padding: "2rem", textAlign: "center",
               animation: "popIn 0.5s cubic-bezier(.34,1.56,.64,1) both",
+              border: "2px solid #ff6699"
             }}>
-              <div style={{ fontSize: "clamp(2.5rem, 8vw, 4rem)", animation: "heartBeat 1.2s ease-in-out infinite", marginBottom: "0.8rem" }}>
-                💖
-              </div>
-              <p style={{
-                fontSize: "clamp(1.3rem, 4vw, 1.8rem)",
-                fontWeight: "700",
-                color: "#c0265a",
-                margin: "0 0 0.4rem 0",
-              }}>
-                მიხარია! 🥰
-              </p>
-              <p style={{ fontSize: "clamp(0.95rem, 2.5vw, 1.1rem)", color: "#8b3a5a", margin: 0, fontStyle: "italic" }}>
-                კიდევ ერთხელ გილოცავ, საუკეთესო წელი გქონოდეს! 🌸
-              </p>
+              <div style={{ fontSize: "3rem", animation: "heartBeat 1.2s infinite" }}>💖</div>
+              <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#c0265a" }}>მიხარია! 🥰</p>
+              <p style={{ color: "#8b3a5a", fontStyle: "italic" }}>საუკეთესო დღეს გისურვებ!</p>
             </div>
           )}
-
         </div>
       )}
     </div>
