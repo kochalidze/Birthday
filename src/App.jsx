@@ -37,30 +37,47 @@ const PHOTOS = [
 ];
 
 function NoButton({ containerRef }) {
-  const [pos, setPos] = useState({ x: null, y: null });
+  const [pos, setPos] = useState(null);
   const btnRef = useRef(null);
 
   function runAway() {
     const container = containerRef.current;
-    if (!container || !btnRef.current) return;
+    const btn = btnRef.current;
+    const yes = yesRef.current;
+    if (!container || !btn || !yes) return;
+
     const cr = container.getBoundingClientRect();
-    const br = btnRef.current.getBoundingClientRect();
-    const maxX = cr.width - br.width;
-    const maxY = cr.height - br.height;
-    let nx, ny;
-    let tries = 0;
+    const br = btn.getBoundingClientRect();
+    const yr = yes.getBoundingClientRect();
+
+    const bw = br.width;
+    const bh = br.height;
+    const maxX = cr.width - bw;
+    const maxY = cr.height - bh;
+
+    const yesLeft = yr.left - cr.left;
+    const yesTop = yr.top - cr.top;
+    const yesRight = yesLeft + yr.width;
+    const yesBottom = yesTop + yr.height;
+    const margin = 20;
+
+    let nx, ny, tries = 0;
     do {
       nx = Math.random() * maxX;
       ny = Math.random() * maxY;
+      const noRight = nx + bw;
+      const noBottom = ny + bh;
+      const overlaps =
+        nx < yesRight + margin &&
+        noRight > yesLeft - margin &&
+        ny < yesBottom + margin &&
+        noBottom > yesTop - margin;
+      if (!overlaps) break;
       tries++;
-    } while (
-      tries < 20 &&
-      Math.abs(nx - (pos.x || maxX / 2)) < 80 &&
-      Math.abs(ny - (pos.y || maxY / 2)) < 80
-    );
+    } while (tries < 40);
+
     setPos({ x: nx, y: ny });
   }
-
   const style = pos.x !== null ? {
     position: "absolute",
     left: pos.x,
@@ -345,7 +362,9 @@ export default function App() {
                   ძალიან 😍
                 </button>
 
-                <NoButton containerRef={loveBoxRef} />
+                <div style={{ position: "absolute", top: "12px", right: "12px" }}>
+                  <NoButton containerRef={loveBoxRef} yesRef={yesRef} />
+                </div>
               </div>
             </div>
           )}
